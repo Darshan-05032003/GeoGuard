@@ -16,7 +16,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.geoguard.ui.groups.GroupsViewModel
 import com.example.geoguard.ui.groups.MyGroupsScreen
-
+import com.example.geoguard.ui.creategroup.CreateGroupScreen
+import com.example.geoguard.ui.creategroup.CreateGroupViewModel
 object Routes {
     const val GROUPS = "groups"
     const val CREATE_GROUP = "create_group"
@@ -49,12 +50,23 @@ fun AppNavHost(onLogout: () -> Unit) {
             PlaceholderScreen(text = "Create Group: coming in Lesson 6")
         }
 
-        composable(
-            route = Routes.GROUP_DETAIL,
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId").orEmpty()
-            PlaceholderScreen(text = "Group $groupId: coming in Lesson 7")
+        composable(Routes.CREATE_GROUP) {
+            val createViewModel: CreateGroupViewModel = viewModel()
+            val uiState by createViewModel.uiState.collectAsState()
+
+            CreateGroupScreen(
+                uiState = uiState,
+                onUseCurrentLocation = createViewModel::fetchCurrentLocation,
+                onPermissionDenied = createViewModel::onPermissionDenied,
+                onRadiusChange = createViewModel::onRadiusChange,
+                onCreate = createViewModel::createGroup,
+                onBack = { navController.popBackStack() },
+                onCreated = { groupId ->
+                    navController.navigate(Routes.groupDetail(groupId)) {
+                        popUpTo(Routes.CREATE_GROUP) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
