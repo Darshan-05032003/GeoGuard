@@ -58,5 +58,6 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.play.services)
 }

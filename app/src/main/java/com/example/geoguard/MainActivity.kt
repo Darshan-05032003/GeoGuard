@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.geoguard.ui.auth.AuthViewModel
 import com.example.geoguard.ui.auth.LoginScreen
-import com.example.geoguard.ui.home.HomeScreen
+import com.example.geoguard.ui.navigation.AppNavHost
 import com.example.geoguard.ui.theme.GeoGuardTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,7 +35,7 @@ fun GeoGuardApp(authViewModel: AuthViewModel = viewModel()) {
     val uiState by authViewModel.uiState.collectAsState()
 
     if (uiState.isLoggedIn) {
-        HomeScreen(onLogout = authViewModel::logout)
+        AppNavHost(onLogout = authViewModel::logout)
     } else {
         LoginScreen(
             uiState = uiState,
