@@ -65,16 +65,13 @@ class CreateGroupViewModel(application: Application) : AndroidViewModel(applicat
 
     fun createGroup(name: String) {
         val state = _uiState.value
+        if (state.isSaving) return
+
+        val error = CreateGroupValidator.validate(name, state.latitude, state.longitude, state.radiusMeters)
         val lat = state.latitude
         val lng = state.longitude
-
-        if (state.isSaving) return
-        if (name.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Enter a group name") }
-            return
-        }
-        if (lat == null || lng == null) {
-            _uiState.update { it.copy(errorMessage = "Set the zone location first") }
+        if (error != null || lat == null || lng == null) {
+            _uiState.update { it.copy(errorMessage = error ?: CreateGroupValidator.ERROR_NO_LOCATION) }
             return
         }
 
