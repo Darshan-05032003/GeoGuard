@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.geoguard.data.model.Group
 import com.example.geoguard.util.InviteCodeGenerator
+import com.example.geoguard.ui.permissions.PermissionsCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +46,7 @@ fun MyGroupsScreen(
     onCreateClick: () -> Unit,
     onJoin: (code: String) -> Unit,
     onClearMessages: () -> Unit,
+    onPermissionsChanged: () -> Unit,
     onLogout: () -> Unit
 ) {
     var showJoinDialog by remember { mutableStateOf(false) }
@@ -75,6 +77,8 @@ fun MyGroupsScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
+            PermissionsCard(onPermissionsChanged = onPermissionsChanged)
+            Spacer(modifier = Modifier.height(12.dp))
             OutlinedButton(
                 onClick = {
                     onClearMessages()

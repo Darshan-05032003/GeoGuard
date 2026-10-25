@@ -15,6 +15,15 @@ import com.example.geoguard.ui.groupdetail.GroupDetailScreen
 import com.example.geoguard.ui.groupdetail.GroupDetailViewModel
 import com.example.geoguard.ui.groups.GroupsViewModel
 import com.example.geoguard.ui.groups.MyGroupsScreen
+import android.util.Log
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.example.geoguard.data.repository.GroupRepository
+import com.example.geoguard.geofence.GeofenceManager
+import kotlinx.coroutines.flow.catch
 
 object Routes {
     const val GROUPS = "groups"
@@ -26,7 +35,18 @@ object Routes {
 
 @Composable
 fun AppNavHost(onLogout: () -> Unit) {
+
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val geofenceManager = remember { GeofenceManager(context) }
+    var permissionVersion by remember { mutableIntStateOf(0) }
+
+    // Keep the OS geofences in sync with the groups I belong to (re-runs when permissions change).
+    LaunchedEffect(permissionVersion) {
+        GroupRepository().observeMyGroups()
+            .catch { e -> Log.e("AppNavHost", "Geofence sync stopped", e) }
+            .collect { groups -> geofenceManager.sync(groups) }
+    }
 
     NavHost(navController = navController, startDestination = Routes.GROUPS) {
 
@@ -40,7 +60,11 @@ fun AppNavHost(onLogout: () -> Unit) {
                 onCreateClick = { navController.navigate(Routes.CREATE_GROUP) },
                 onJoin = groupsViewModel::joinGroup,
                 onClearMessages = groupsViewModel::clearMessages,
-                onLogout = onLogout
+                onPermissionsChanged = { permissionVersion++ },
+                onLogout = {
+                    geofenceManager.removeAll()
+                    onLogout()
+                }
             )
         }
 
