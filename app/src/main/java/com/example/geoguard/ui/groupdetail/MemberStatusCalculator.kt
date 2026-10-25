@@ -7,7 +7,9 @@ enum class ZoneState { INSIDE, OUTSIDE, UNKNOWN }
 data class MemberStatus(
     val userId: String,
     val name: String,
-    val state: ZoneState
+    val state: ZoneState,
+    val since: Long? = null
+
 )
 
 object MemberStatusCalculator {
@@ -31,7 +33,8 @@ object MemberStatusCalculator {
             MemberStatus(
                 userId = userId,
                 name = memberNames[userId]?.takeIf { it.isNotBlank() } ?: "Member",
-                state = state
+                state = state,
+                since = latestByUser[userId]?.timestamp
             )
         }
     }

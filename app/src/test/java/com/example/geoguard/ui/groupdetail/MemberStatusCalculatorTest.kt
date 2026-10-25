@@ -76,4 +76,18 @@ class MemberStatusCalculatorTest {
         )
         assertEquals(listOf("a", "b"), result.map { it.userId })
     }
+    @Test
+    fun `status carries the time of the latest event, or null when there is none`() {
+        val events = listOf(
+            event("a", ZoneEvent.TYPE_EXIT, 100),
+            event("a", ZoneEvent.TYPE_ENTER, 500)
+        )
+        val result = MemberStatusCalculator.calculate(
+            memberIds = listOf("a", "b"),
+            memberNames = emptyMap(),
+            events = events
+        )
+        assertEquals(500L, result.first { it.userId == "a" }.since)
+        assertEquals(null, result.first { it.userId == "b" }.since)
+    }
 }
