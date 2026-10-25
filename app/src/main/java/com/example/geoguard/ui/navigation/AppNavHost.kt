@@ -1,23 +1,21 @@
 package com.example.geoguard.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.geoguard.ui.groups.GroupsViewModel
-import com.example.geoguard.ui.groups.MyGroupsScreen
 import com.example.geoguard.ui.creategroup.CreateGroupScreen
 import com.example.geoguard.ui.creategroup.CreateGroupViewModel
+import com.example.geoguard.ui.groupdetail.GroupDetailScreen
+import com.example.geoguard.ui.groupdetail.GroupDetailViewModel
+import com.example.geoguard.ui.groups.GroupsViewModel
+import com.example.geoguard.ui.groups.MyGroupsScreen
+
 object Routes {
     const val GROUPS = "groups"
     const val CREATE_GROUP = "create_group"
@@ -47,10 +45,6 @@ fun AppNavHost(onLogout: () -> Unit) {
         }
 
         composable(Routes.CREATE_GROUP) {
-            PlaceholderScreen(text = "Create Group: coming in Lesson 6")
-        }
-
-        composable(Routes.CREATE_GROUP) {
             val createViewModel: CreateGroupViewModel = viewModel()
             val uiState by createViewModel.uiState.collectAsState()
 
@@ -68,12 +62,18 @@ fun AppNavHost(onLogout: () -> Unit) {
                 }
             )
         }
-    }
-}
 
-@Composable
-private fun PlaceholderScreen(text: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = text)
+        composable(
+            route = Routes.GROUP_DETAIL,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) {
+            val detailViewModel: GroupDetailViewModel = viewModel()
+            val uiState by detailViewModel.uiState.collectAsState()
+
+            GroupDetailScreen(
+                uiState = uiState,
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }
