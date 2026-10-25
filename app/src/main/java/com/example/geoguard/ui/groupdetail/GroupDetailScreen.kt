@@ -59,7 +59,7 @@ fun GroupDetailScreen(uiState: GroupDetailUiState, onBack: () -> Unit) {
                         onClick = onBack,
                         modifier = Modifier.semantics { contentDescription = "Back" }
                     ) {
-                        Text("←", style = MaterialTheme.typography.headlineSmall)
+                        Text("←", style = MaterialTheme.typography.headlineMedium)
                     }
                 }
             )
