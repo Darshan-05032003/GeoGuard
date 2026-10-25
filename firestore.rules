@@ -1,0 +1,124 @@
+rules_version = '2';
+
+// GeoGuard security rules. Every path is denied unless a rule below allows it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function groupPath(groupId) { return /databases/$(database)/documents/groups/$(groupId); }
+
+    function isMember(groupId) {
+      return signedIn()
+        && exists(groupPath(groupId))
+        && uid() in get(groupPath(groupId)).data.memberIds;
+    }
+
+    function validName(name, maxLen) {
+      return name is string && name.size() > 0 && name.size() <= maxLen;
+    }
+
+    // Same alphabet as InviteCodeGenerator: no 0/O/1/I.
+    function validInviteCode(code) {
+      return code is string && code.matches('^[A-HJ-NP-Z2-9]{6}$');
+    }
+
+    function validZone(zone) {
+      return zone is map
+        && zone.keys().hasAll(['lat', 'lng', 'radiusMeters'])
+        && zone.keys().hasOnly(['lat', 'lng', 'radiusMeters'])
+        && zone.lat is number && zone.lat >= -90 && zone.lat <= 90
+        && zone.lng is number && zone.lng >= -180 && zone.lng <= 180
+        && zone.radiusMeters is number && zone.radiusMeters >= 150 && zone.radiusMeters <= 1000;
+    }
+
+    // A non-member may only add *themselves* (id + display name). Nothing else on the group may change.
+    function isSelfJoin() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let beforeNames = before.get('memberNames', {});
+      let afterNames = after.get('memberNames', {});
+      return after.diff(before).affectedKeys().hasOnly(['memberIds', 'memberNames'])
+        && after.memberIds.toSet() == before.memberIds.toSet().union([uid()].toSet())
+        && after.memberIds.size() == after.memberIds.toSet().size()
+        && after.memberIds.size() <= 50
+        && afterNames.diff(beforeNames).affectedKeys().hasOnly([uid()])
+        && validName(afterNames[uid()], 60);
+    }
+
+    // users/{uid}: private profile. Only the owner can read or write it.
+    match /users/{userId} {
+      allow read: if signedIn() && uid() == userId;
+      allow create: if signedIn() && uid() == userId
+        && request.resource.data.keys().hasOnly(['id', 'name', 'email', 'fcmToken'])
+        && request.resource.data.id == userId
+        && validName(request.resource.data.name, 60);
+      allow update: if signedIn() && uid() == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && validName(request.resource.data.name, 60);
+      allow delete: if false;
+    }
+
+    // fcmTokens/{uid}: push token. Owner only; the Cloud Function reads it with admin rights.
+    match /fcmTokens/{userId} {
+      allow read, delete: if signedIn() && uid() == userId;
+      allow create, update: if signedIn() && uid() == userId
+        && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 0
+        && request.resource.data.token.size() < 4096;
+    }
+
+    // inviteCodes/{CODE} -> { groupId }. Can be fetched by exact code but never listed,
+    // so nobody can enumerate groups. Codes can't be overwritten (collision = rejected).
+    match /inviteCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && validInviteCode(code)
+        && request.resource.data.keys().hasOnly(['groupId'])
+        && getAfter(groupPath(request.resource.data.groupId)).data.ownerId == uid()
+        && getAfter(groupPath(request.resource.data.groupId)).data.inviteCode == code;
+      allow update, delete: if false;
+    }
+
+    match /groups/{groupId} {
+      // Covers both single reads and the "where memberIds array-contains me" query.
+      allow read: if signedIn() && uid() in resource.data.memberIds;
+
+      // Creator must be the only member, and the invite code doc must be written in the same batch.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['id', 'name', 'inviteCode', 'ownerId', 'memberIds', 'memberNames', 'zone'])
+        && request.resource.data.id == groupId
+        && request.resource.data.ownerId == uid()
+        && request.resource.data.memberIds == [uid()]
+        && request.resource.data.memberNames.keys().hasOnly([uid()])
+        && validName(request.resource.data.memberNames[uid()], 60)
+        && validName(request.resource.data.name, 40)
+        && validInviteCode(request.resource.data.inviteCode)
+        && existsAfter(/databases/$(database)/documents/inviteCodes/$(request.resource.data.inviteCode))
+        && validZone(request.resource.data.zone);
+
+      allow update: if signedIn() && isSelfJoin();
+      allow delete: if signedIn() && resource.data.ownerId == uid();
+
+      // Zone events. Only members, only about themselves, with a deterministic id and a sane timestamp.
+      match /events/{eventId} {
+        allow read: if isMember(groupId);
+        allow create: if isMember(groupId)
+          && request.resource.data.keys().hasOnly(['id', 'userId', 'userName', 'type', 'timestamp'])
+          && request.resource.data.userId == uid()
+          && request.resource.data.type in ['EXIT', 'ENTER']
+          && request.resource.data.timestamp is int
+          && request.resource.data.timestamp <= request.time.toMillis() + 300000
+          && request.resource.data.timestamp >= request.time.toMillis() - 86400000
+          && eventId == uid() + '_' + request.resource.data.type + '_' + string(request.resource.data.timestamp)
+          && request.resource.data.id == eventId
+          && validName(request.resource.data.userName, 60);
+        // A retried upload re-writes identical data; allow that as a no-op, nothing else.
+        allow update: if isMember(groupId) && request.resource.data == resource.data;
+        allow delete: if false;
+      }
+    }
+  }
+}

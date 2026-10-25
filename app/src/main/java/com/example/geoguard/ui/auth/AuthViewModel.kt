@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
+import com.example.geoguard.data.repository.TokenRepository
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class AuthUiState(
     val isLoading : Boolean = false,
@@ -17,8 +18,9 @@ data class AuthUiState(
 )
 
 class AuthViewModel(
-    private val  repository: AuthRepository = AuthRepository()
-): ViewModel(){
+    private val repository: AuthRepository = AuthRepository(),
+    private val tokenRepository: TokenRepository = TokenRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState(isLoggedIn= repository.isLoggedIn()))
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -64,9 +66,14 @@ class AuthViewModel(
                 }
         }
     }
-    fun logout(){
-        repository.logout()
-        _uiState.update{AuthUiState()}
+    fun logout() {
+        viewModelScope.launch {
+            // Remove this phone's push token first (needs auth), so the old account stops getting alerts here.
+            // Offline, a Firestore write never confirms; don't let that block logout (the delete is still queued).
+            withTimeoutOrNull(3_000) { tokenRepository.clearToken() }
+            repository.logout()
+            _uiState.update { AuthUiState() }
+        }
     }
 
 }

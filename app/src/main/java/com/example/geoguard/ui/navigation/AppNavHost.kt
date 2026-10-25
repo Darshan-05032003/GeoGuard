@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.geoguard.data.repository.GroupRepository
 import com.example.geoguard.geofence.GeofenceManager
 import kotlinx.coroutines.flow.catch
+import com.example.geoguard.data.repository.TokenRepository
 
 object Routes {
     const val GROUPS = "groups"
@@ -46,6 +47,12 @@ fun AppNavHost(onLogout: () -> Unit) {
         GroupRepository().observeMyGroups()
             .catch { e -> Log.e("AppNavHost", "Geofence sync stopped", e) }
             .collect { groups -> geofenceManager.sync(groups) }
+    }
+
+    // Make sure the server has this phone's current push token.
+    LaunchedEffect(Unit) {
+        TokenRepository().syncCurrentToken()
+            .onFailure { e -> Log.e("AppNavHost", "Could not save FCM token", e) }
     }
 
     NavHost(navController = navController, startDestination = Routes.GROUPS) {
