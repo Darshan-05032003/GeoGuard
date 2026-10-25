@@ -39,6 +39,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.geoguard.data.model.Group
 import com.example.geoguard.data.model.ZoneEvent
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 private val InsideGreen = Color(0xFF2E7D32)
 
@@ -48,9 +52,16 @@ fun GroupDetailScreen(uiState: GroupDetailUiState, onBack: () -> Unit) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text(uiState.group?.name ?: "Group") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.semantics { contentDescription = "Back" }
+                    ) {
+                        Text("←", style = MaterialTheme.typography.headlineSmall)
+                    }
+                }
             )
         }
     ) { innerPadding ->

@@ -66,9 +66,16 @@ fun CreateGroupScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("Create group") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.semantics { contentDescription = "Back" }
+                    ) {
+                        Text("←", style = MaterialTheme.typography.headlineSmall)
+                    }
+                }
             )
         }
     ) { innerPadding ->
