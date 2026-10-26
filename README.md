@@ -70,8 +70,3 @@ sequenceDiagram
 - One device per account receives alerts.
 - Next steps: Firebase App Check, mock-location detection, iOS via Kotlin Multiplatform.
 
-## Tools used
-
-I built this step by step with guidance from Claude (an AI assistant): I wrote the early parts myself
-while learning, and the later parts (geofencing, notifications, Cloud Function, rules, tests) were
-AI-assisted, then reviewed, deployed and tested on real devices by me.
