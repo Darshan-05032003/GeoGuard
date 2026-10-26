@@ -44,25 +44,43 @@ sequenceDiagram
 - **Security (`firestore.rules`):** only members can read a group; users can only add *themselves*
   when joining and only report *their own* exits; push tokens are private; groups can't be listed or browsed.
 
-## Run it
+## Try it quickly (no setup)
 
-1. Create a Firebase project, add an Android app `com.example.geoguard`, and put `google-services.json` in `app/`.
-2. Enable Email/Password Auth and Firestore (`asia-south1`); upgrade to the Blaze plan (needed for Cloud Functions).
-3. Deploy the backend:
+Download **`app-debug.apk`** from the [latest release](https://github.com/Darshan-05032003/GeoGuard/releases)
+and install it on two Android devices (or one device + an emulator with Google Play). It connects to my
+Firebase project, so register two accounts, create a group on one device, join it from the other with the
+invite code, and grant **"Allow all the time"** location and notifications.
+
+## Run it yourself
+
+**Requirements:** Android Studio (latest stable, with Android SDK 37), Node.js 22, a Google account.
+
+1. **Firebase project:** create one in the Firebase console → add an Android app with package
+   `com.example.geoguard` → download `google-services.json` into the `app/` folder.
+2. In the console, enable **Authentication → Email/Password** and **Firestore** (location **asia-south1**;
+   if you pick another location, change `region` in `functions/index.js` to match).
+   Upgrade to the **Blaze** plan (required for Cloud Functions; demo usage stays in the free tier).
+3. **Deploy the backend** from the project root:
    ```bash
-   firebase use --add
+   npm install -g firebase-tools
+   firebase login
+   firebase use --add            # select your project, alias: default
    cd functions && npm install && cd ..
    firebase deploy --only firestore:rules,functions
    ```
-4. Run the app on two devices (an emulator with Google Play images + a phone) and grant
-   **"Allow all the time"** location and notifications.
-5. To simulate leaving on the emulator: `adb emu geo fix <lng> <lat>` inside the zone, then ~1 km away.
-
-## Tests
-
-- Android unit tests (22): `./gradlew testDebugUnitTest`
-- Cloud Function tests (28): `cd functions && npm test`
-
+   On the very first deploy, Firebase may fail with an *"Eventarc Service Agent"* permission error.
+   That's a one-time setup delay on Google's side: wait 3–5 minutes and run the same deploy again.
+4. **Run the app:** open the project in Android Studio → let Gradle sync → Run ▶ on two devices
+   (an emulator **with Google Play** + a phone works well). Use a **different account on each device**.
+5. **Simulate leaving the zone on the emulator** (longitude first; the zone centre is shown on the group screen):
+   ```bash
+   adb -s emulator-5554 emu geo fix <lng> <lat>          # move INSIDE first, open Google Maps, wait ~1 min
+   adb -s emulator-5554 emu geo fix <lng> <lat+0.01>     # then ~1 km OUTSIDE → the other device gets the push
+   ```
+   A geofence fires only on a *crossing*, so the device must be inside before it moves out.
+   Each member triggers at most **one alert per group every 5 minutes** (cooldown against GPS jitter).
+   Repeat exits within that window are still shown in the group's activity feed.
+   
 ## Known limitations
 
 - Alerts can be delayed by up to ~2 minutes (geofencing trade-off).
