@@ -1,6 +1,6 @@
 # GeoGuard: Group Geofence Alerts (Android)
 
-**Demo video:** _add Loom link here_
+
 
 A group of users creates a tracking group with a geofenced zone. When any member leaves the zone,
 all **other** members get a push notification, even when the apps are closed.
